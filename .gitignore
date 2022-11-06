@@ -4,4 +4,4 @@
 *.iml
 terraform.tfstate*
 
-scripts/
+_scripts/
