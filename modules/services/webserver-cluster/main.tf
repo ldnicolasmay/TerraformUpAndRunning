@@ -38,7 +38,12 @@ resource "aws_launch_configuration" "example" {
   #            echo "<p>${data.terraform_remote_state.db.outputs.port}</p>" >> index.html
   #            nohup busybox httpd -f -p ${var.server_port} &
   #            EOF
-  user_data = templatefile("user-data.sh", {
+  #user_data = templatefile("user-data.sh", {
+  #  server_port = var.server_port
+  #  db_address  = data.terraform_remote_state.db.outputs.address
+  #  db_port     = data.terraform_remote_state.db.outputs.port
+  #})
+  user_data = templatefile("${path.module}/user-data.sh", {
     server_port = var.server_port
     db_address  = data.terraform_remote_state.db.outputs.address
     db_port     = data.terraform_remote_state.db.outputs.port
@@ -74,21 +79,41 @@ resource "aws_autoscaling_group" "example" {
 resource "aws_security_group" "alb" {
   name = "${var.cluster_name}-alb-security-group"
 
-  # Allow inbound HTTP requests
-  ingress {
-    from_port   = local.http_port
-    to_port     = local.http_port
-    protocol    = local.tcp_protocol
-    cidr_blocks = local.all_ips
-  }
+  # Allow inbound HTTP requests; now defined in aws_security_group_rule below
+  #ingress {
+  #  from_port   = local.http_port
+  #  to_port     = local.http_port
+  #  protocol    = local.tcp_protocol
+  #  cidr_blocks = local.all_ips
+  #}
 
-  # Allow all outbound requests
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = local.any_protocol
-    cidr_blocks = local.all_ips
-  }
+  # Allow all outbound requests; now defined in aws_security_group_rule below
+  #egress {
+  #  from_port   = 0
+  #  to_port     = 0
+  #  protocol    = local.any_protocol
+  #  cidr_blocks = local.all_ips
+  #}
+}
+
+resource "aws_security_group_rule" "allow_http_inbound" {
+  type              = "ingress"
+  security_group_id = aws_security_group.alb.id
+
+  from_port   = local.http_port
+  to_port     = local.http_port
+  protocol    = local.tcp_protocol
+  cidr_blocks = local.all_ips
+}
+
+resource "aws_security_group_rule" "allow_all_outbound" {
+  type              = "egress"
+  security_group_id = aws_security_group.alb.id
+
+  from_port   = local.any_port
+  to_port     = local.any_port
+  protocol    = local.any_protocol
+  cidr_blocks = local.all_ips
 }
 
 resource "aws_lb" "example" {
